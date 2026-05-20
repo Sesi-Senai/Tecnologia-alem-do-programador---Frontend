@@ -1,19 +1,17 @@
 import { useState } from 'react'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { Alert, Button, CircularProgress, TextField } from '@mui/material'
 import { AuthLayout } from '../components/AuthLayout'
 import { CampoSenha } from '../components/CampoSenha'
 import { ApiError, loginUsuario } from '../services/api'
-
-type LoginPageProps = {
-  onIrParaCadastro: () => void
-}
 
 type ErrosLogin = {
   email?: string
   senha?: string
 }
 
-export function LoginPage({ onIrParaCadastro }: LoginPageProps) {
+export function LoginPage() {
+  const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erros, setErros] = useState<ErrosLogin>({})
@@ -33,9 +31,10 @@ export function LoginPage({ onIrParaCadastro }: LoginPageProps) {
 
     setCarregando(true)
     try {
-      await loginUsuario({ email, senha })
-      setEmail('')
-      setSenha('')
+      const resposta = await loginUsuario({ email, senha })
+      if (resposta.usuario?.id) {
+        navigate(`/home?id=${resposta.usuario.id}`)
+      }
     } catch (erro) {
       const mensagem =
         erro instanceof ApiError
@@ -102,15 +101,16 @@ export function LoginPage({ onIrParaCadastro }: LoginPageProps) {
         </Button>
 
         <Button
-          type="button"
+          component={RouterLink}
+          to="/cadastro"
           fullWidth
           variant="text"
           disabled={carregando}
           sx={{ mt: 2 }}
-          onClick={onIrParaCadastro}
         >
           Registrar-se
         </Button>
+
       </form>
     </AuthLayout>
   )

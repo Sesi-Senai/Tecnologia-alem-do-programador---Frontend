@@ -1,14 +1,10 @@
 import { useState } from 'react'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { Alert, Button, CircularProgress, TextField } from '@mui/material'
 import { AuthLayout } from '../components/AuthLayout'
 import { CampoSenha } from '../components/CampoSenha'
 import { ApiError, cadastrarUsuario } from '../services/api'
 import { mascaraCpf } from '../utils/mascaraCpf'
-
-type RegisterPageProps = {
-  onVoltarLogin: () => void
-  onCadastroSucesso: () => void
-}
 
 type ErrosCadastro = {
   nome?: string
@@ -54,7 +50,8 @@ function validarCadastro(
   return erros
 }
 
-export function RegisterPage({ onVoltarLogin, onCadastroSucesso }: RegisterPageProps) {
+export function RegisterPage() {
+  const navigate = useNavigate()
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [cpf, setCpf] = useState('')
@@ -84,7 +81,7 @@ export function RegisterPage({ onVoltarLogin, onCadastroSucesso }: RegisterPageP
         senha,
         confirmarSenha,
       })
-      onCadastroSucesso()
+      navigate('/login')
     } catch (erro) {
       const mensagem =
         erro instanceof ApiError
@@ -204,12 +201,12 @@ export function RegisterPage({ onVoltarLogin, onCadastroSucesso }: RegisterPageP
         </Button>
 
         <Button
-          type="button"
+          component={RouterLink}
+          to="/login"
           fullWidth
           variant="text"
           disabled={carregando}
           sx={{ mt: 2 }}
-          onClick={onVoltarLogin}
         >
           Já tenho conta
         </Button>

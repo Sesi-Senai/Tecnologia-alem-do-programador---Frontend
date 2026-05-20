@@ -1,22 +1,12 @@
-import { useState } from 'react'
-import { LoginPage } from './pages/LoginPage'
-import { RegisterPage } from './pages/RegisterPage'
-
-type Tela = 'login' | 'cadastro'
+import { BrowserRouter } from 'react-router-dom'
+import { AppRoutes } from './routes/AppRoutes'
 
 function App() {
-  const [tela, setTela] = useState<Tela>('login')
-
-  if (tela === 'cadastro') {
-    return (
-      <RegisterPage
-        onVoltarLogin={() => setTela('login')}
-        onCadastroSucesso={() => setTela('login')}
-      />
-    )
-  }
-
-  return <LoginPage onIrParaCadastro={() => setTela('cadastro')} />
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
+  )
 }
 
 export default App

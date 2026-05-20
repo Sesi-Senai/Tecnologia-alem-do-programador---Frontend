@@ -10,6 +10,7 @@ export type UsuarioResposta = {
   nome: string
   email: string
   cpf: string
+  moedas?: number
 }
 
 export class ApiError extends Error {
@@ -66,5 +67,11 @@ export function loginUsuario(dados: LoginPayload) {
   return requisicao<RespostaApi<UsuarioResposta>>('/login', {
     method: 'POST',
     body: JSON.stringify(dados),
+  })
+}
+
+export function buscarUsuarioPorId(id: string) {
+  return requisicao<{ usuario: UsuarioResposta }>(`/usuarios/${id}`, {
+    method: 'GET',
   })
 }
