@@ -1,0 +1,9 @@
+{
+  "name": "tecnologia-alem-do-programador-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix Sessi",
+    "build": "npm run build --prefix Sessi",
+    "preview": "npm run preview --prefix Sessi"
+  }
+}
