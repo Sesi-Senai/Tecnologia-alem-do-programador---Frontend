@@ -8,7 +8,7 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 
-type CampoSenhaProps = Omit<TextFieldProps, 'type'> & {
+type CampoSenhaProps = Omit<TextFieldProps, 'type' | 'onChange'> & {
   value: string
   onChange: (valor: string) => void
 }

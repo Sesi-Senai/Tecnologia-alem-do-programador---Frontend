@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Alert, Button, TextField } from '@mui/material'
+import { Alert, Button, CircularProgress, TextField } from '@mui/material'
 import { AuthLayout } from '../components/AuthLayout'
 import { CampoSenha } from '../components/CampoSenha'
+import { ApiError, loginUsuario } from '../services/api'
 
 type LoginPageProps = {
   onIrParaCadastro: () => void
@@ -16,9 +17,12 @@ export function LoginPage({ onIrParaCadastro }: LoginPageProps) {
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
   const [erros, setErros] = useState<ErrosLogin>({})
+  const [erroApi, setErroApi] = useState('')
+  const [carregando, setCarregando] = useState(false)
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
+    setErroApi('')
 
     const novosErros: ErrosLogin = {}
     if (!email.trim()) novosErros.email = 'Preencha o e-mail'
@@ -27,12 +31,31 @@ export function LoginPage({ onIrParaCadastro }: LoginPageProps) {
     setErros(novosErros)
     if (Object.keys(novosErros).length > 0) return
 
-    alert(`Email: ${email}\nSenha: ${senha}`)
+    setCarregando(true)
+    try {
+      await loginUsuario({ email, senha })
+      setEmail('')
+      setSenha('')
+    } catch (erro) {
+      const mensagem =
+        erro instanceof ApiError
+          ? erro.message
+          : 'Não foi possível conectar ao servidor. Verifique se o backend está rodando.'
+      setErroApi(mensagem)
+    } finally {
+      setCarregando(false)
+    }
   }
 
   return (
     <AuthLayout titulo="Login">
       <form onSubmit={handleLogin} noValidate>
+        {erroApi && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {erroApi}
+          </Alert>
+        )}
+
         {Object.keys(erros).length > 0 && (
           <Alert severity="error" sx={{ mb: 2 }}>
             Preencha todos os campos para entrar.
@@ -46,6 +69,7 @@ export function LoginPage({ onIrParaCadastro }: LoginPageProps) {
           variant="outlined"
           margin="normal"
           value={email}
+          disabled={carregando}
           onChange={(e) => {
             setEmail(e.target.value)
             if (erros.email) setErros((prev) => ({ ...prev, email: undefined }))
@@ -57,6 +81,7 @@ export function LoginPage({ onIrParaCadastro }: LoginPageProps) {
         <CampoSenha
           label="Senha"
           value={senha}
+          disabled={carregando}
           onChange={(valor) => {
             setSenha(valor)
             if (erros.senha) setErros((prev) => ({ ...prev, senha: undefined }))
@@ -70,15 +95,17 @@ export function LoginPage({ onIrParaCadastro }: LoginPageProps) {
           fullWidth
           variant="contained"
           size="large"
+          disabled={carregando}
           sx={{ mt: 3, py: 1.5, borderRadius: 2 }}
         >
-          Entrar
+          {carregando ? <CircularProgress size={26} color="inherit" /> : 'Entrar'}
         </Button>
 
         <Button
           type="button"
           fullWidth
           variant="text"
+          disabled={carregando}
           sx={{ mt: 2 }}
           onClick={onIrParaCadastro}
         >

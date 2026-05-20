@@ -8,7 +8,12 @@ function App() {
   const [tela, setTela] = useState<Tela>('login')
 
   if (tela === 'cadastro') {
-    return <RegisterPage onVoltarLogin={() => setTela('login')} />
+    return (
+      <RegisterPage
+        onVoltarLogin={() => setTela('login')}
+        onCadastroSucesso={() => setTela('login')}
+      />
+    )
   }
 
   return <LoginPage onIrParaCadastro={() => setTela('cadastro')} />
