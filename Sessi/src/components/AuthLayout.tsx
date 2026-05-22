@@ -3,10 +3,11 @@ import type { ReactNode } from 'react'
 
 type AuthLayoutProps = {
   titulo: string
+  subtitulo?: string
   children: ReactNode
 }
 
-export function AuthLayout({ titulo, children }: AuthLayoutProps) {
+export function AuthLayout({ titulo, subtitulo, children }: AuthLayoutProps) {
   return (
     <Box
       sx={{
@@ -30,12 +31,21 @@ export function AuthLayout({ titulo, children }: AuthLayoutProps) {
             variant="h4"
             sx={{
               textAlign: 'center',
-              mb: 2,
+              mb: subtitulo ? 0.5 : 2,
               fontWeight: 'bold',
             }}
           >
             {titulo}
           </Typography>
+          {subtitulo && (
+            <Typography
+              variant="subtitle1"
+              color="text.secondary"
+              sx={{ textAlign: 'center', mb: 2 }}
+            >
+              {subtitulo}
+            </Typography>
+          )}
           {children}
         </CardContent>
       </Card>

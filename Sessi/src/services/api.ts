@@ -27,7 +27,10 @@ async function requisicao<T>(
   opcoes: RequestInit,
 ): Promise<T> {
   const resposta = await fetch(`${API_BASE}${caminho}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      Accept: 'application/json; charset=utf-8',
+    },
     ...opcoes,
   })
 
@@ -70,8 +73,80 @@ export function loginUsuario(dados: LoginPayload) {
   })
 }
 
+export type UsuarioCompleto = UsuarioResposta & {
+  senha?: string
+  criadoEm?: string
+}
+
+export function listarUsuarios() {
+  return requisicao<{ usuarios: UsuarioCompleto[] }>('/usuarios', {
+    method: 'GET',
+  })
+}
+
 export function buscarUsuarioPorId(id: string) {
   return requisicao<{ usuario: UsuarioResposta }>(`/usuarios/${id}`, {
     method: 'GET',
+  })
+}
+
+export function adicionarMoedasUsuario(id: string, quantidade = 100) {
+  return requisicao<{ mensagem: string; usuario: UsuarioResposta }>(
+    `/usuarios/${id}/moedas`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ quantidade }),
+    },
+  )
+}
+
+export type MensagemChat = {
+  id: string
+  usuarioId: string
+  nome: string
+  texto: string
+  criadoEm: string
+}
+
+export function listarMensagensChat() {
+  return requisicao<{ mensagens: MensagemChat[] }>('/chat', {
+    method: 'GET',
+  })
+}
+
+export function limparMensagensChat() {
+  return requisicao<{ mensagem: string; mensagens: MensagemChat[] }>('/chat', {
+    method: 'DELETE',
+  })
+}
+
+export const CUSTO_MENSAGEM_CHAT = 15
+
+export type EnviarMensagemChatPayload = {
+  usuarioId: string
+  usuarioCobrancaId: string
+  nome: string
+  texto: string
+  /** Enviado pelo cliente — vulnerabilidade intencional para demo (Caido/Postman). */
+  moedasDescontar?: number | string
+}
+
+export function enviarMensagemChat(dados: EnviarMensagemChatPayload) {
+  const corpo: EnviarMensagemChatPayload = {
+    usuarioId: dados.usuarioId,
+    usuarioCobrancaId: dados.usuarioCobrancaId,
+    nome: dados.nome,
+    texto: dados.texto,
+    moedasDescontar: dados.moedasDescontar ?? CUSTO_MENSAGEM_CHAT,
+  }
+
+  return requisicao<{
+    mensagem: string
+    chat: MensagemChat
+    moedasDescontadas: number
+    usuarioCobranca: UsuarioResposta
+  }>('/chat', {
+    method: 'POST',
+    body: JSON.stringify(corpo),
   })
 }

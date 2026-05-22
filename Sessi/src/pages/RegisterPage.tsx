@@ -29,6 +29,8 @@ function validarCadastro(
 
   if (!email.trim()) {
     erros.email = 'Preencha o e-mail'
+  } else if (!email.includes('@')) {
+    erros.email = 'E-mail deve conter @'
   }
 
   if (!cpf.trim()) {
@@ -94,7 +96,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthLayout titulo="Cadastro">
+    <AuthLayout titulo="Sesi" subtitulo="Cadastro">
       <form onSubmit={handleCadastro} noValidate>
         {erroApi && (
           <Alert severity="error" sx={{ mb: 2 }}>

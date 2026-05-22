@@ -47,7 +47,7 @@ export function LoginPage() {
   }
 
   return (
-    <AuthLayout titulo="Login">
+    <AuthLayout titulo="Sesi" subtitulo="Login">
       <form onSubmit={handleLogin} noValidate>
         {erroApi && (
           <Alert severity="error" sx={{ mb: 2 }}>
