@@ -5,6 +5,7 @@ import { AuthLayout } from '../components/AuthLayout'
 import { CampoSenha } from '../components/CampoSenha'
 import { ApiError, cadastrarUsuario } from '../services/api'
 import { mascaraCpf } from '../utils/mascaraCpf'
+import { validarCpf } from '../utils/validarCpf'
 
 type ErrosCadastro = {
   nome?: string
@@ -33,10 +34,9 @@ function validarCadastro(
     erros.email = 'E-mail deve conter @'
   }
 
-  if (!cpf.trim()) {
-    erros.cpf = 'Preencha o CPF'
-  } else if (cpf.replace(/\D/g, '').length !== 11) {
-    erros.cpf = 'CPF incompleto'
+  const resultadoCpf = validarCpf(cpf)
+  if (!resultadoCpf.ok) {
+    erros.cpf = resultadoCpf.mensagem
   }
 
   if (!senha) {
@@ -74,22 +74,32 @@ export function RegisterPage() {
       return
     }
 
+    const cpfValidado = validarCpf(cpf)
+    if (!cpfValidado.ok) {
+      setErros({ cpf: cpfValidado.mensagem })
+      return
+    }
+
     setCarregando(true)
     try {
       await cadastrarUsuario({
         nome,
         email,
-        cpf,
+        cpf: cpfValidado.cpfFormatado,
         senha,
         confirmarSenha,
       })
-      navigate('/login')
+      navigate('/login', { replace: true })
     } catch (erro) {
       const mensagem =
         erro instanceof ApiError
           ? erro.message
           : 'Não foi possível conectar ao servidor. Verifique se o backend está rodando.'
       setErroApi(mensagem)
+
+      if (erro instanceof ApiError && /cpf/i.test(mensagem)) {
+        setErros((prev) => ({ ...prev, cpf: mensagem }))
+      }
     } finally {
       setCarregando(false)
     }
@@ -151,7 +161,17 @@ export function RegisterPage() {
           value={cpf}
           disabled={carregando}
           onChange={(e) => {
-            setCpf(mascaraCpf(e.target.value))
+            const valor = e.target.value
+
+            if (/[a-zA-ZÀ-ÿ]/.test(valor)) {
+              setErros((prev) => ({
+                ...prev,
+                cpf: 'CPF deve conter apenas números',
+              }))
+              return
+            }
+
+            setCpf(mascaraCpf(valor))
             if (erros.cpf) setErros((prev) => ({ ...prev, cpf: undefined }))
           }}
           placeholder="000.000.000-00"
