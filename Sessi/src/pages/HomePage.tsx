@@ -24,6 +24,7 @@ import {
   Toolbar,
   Typography,
 } from '@mui/material'
+import { BotaoMoedasAnimado } from '../components/BotaoMoedasAnimado'
 import { TextoMensagemChat } from '../components/TextoMensagemChat'
 import {
   ApiError,
@@ -62,9 +63,10 @@ export function HomePage() {
   const [menuAvatar, setMenuAvatar] = useState<null | HTMLElement>(null)
 
   const carregarMensagens = useCallback(async () => {
-    const resposta = await listarMensagensChat()
+    if (!id) return
+    const resposta = await listarMensagensChat(id)
     setMensagens(resposta.mensagens)
-  }, [])
+  }, [id])
 
   useEffect(() => {
     if (!id) {
@@ -75,7 +77,7 @@ export function HomePage() {
     setCarregando(true)
     setErro('')
 
-    Promise.all([buscarUsuarioPorId(id), listarMensagensChat()])
+    Promise.all([buscarUsuarioPorId(id), listarMensagensChat(id)])
       .then(([usuarioRes, chatRes]) => {
         setUsuario(usuarioRes.usuario ?? null)
         setMensagens(chatRes.mensagens)
@@ -145,13 +147,13 @@ export function HomePage() {
   }
 
   async function handleLimparConversa() {
-    if (mensagens.length === 0) return
+    if (mensagens.length === 0 || !id) return
 
     setErroChat('')
     setLimpando(true)
 
     try {
-      await limparMensagensChat()
+      await limparMensagensChat(id)
       setMensagens([])
     } catch (erro) {
       const mensagem =
@@ -276,16 +278,13 @@ export function HomePage() {
 
             {usuario && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ml: 'auto' }}>
-                <Button
-                  variant="contained"
+                <BotaoMoedasAnimado
+                  moedas={usuario.moedas ?? 0}
                   onClick={() => {
                     setAvisoMoedas('')
                     setDialogMoedasAberto(true)
                   }}
-                  sx={{ fontWeight: 600, textTransform: 'none', borderRadius: 2 }}
-                >
-                  {usuario.moedas ?? 0} moedas
-                </Button>
+                />
 
                 <IconButton onClick={handleAbrirMenuAvatar} sx={{ p: 0 }}>
                   <Avatar
@@ -307,6 +306,20 @@ export function HomePage() {
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
                   transformOrigin={{ vertical: 'top', horizontal: 'right' }}
                 >
+                  <MenuItem
+                    disabled={
+                      carregando || enviando || limpando || mensagens.length === 0
+                    }
+                    onClick={() => {
+                      handleFecharMenuAvatar()
+                      void handleLimparConversa()
+                    }}
+                  >
+                    <ListItemIcon>
+                      <DeleteSweepIcon fontSize="small" />
+                    </ListItemIcon>
+                    Limpar conversa
+                  </MenuItem>
                   <MenuItem onClick={handleSair}>
                     <ListItemIcon>
                       <LogoutIcon fontSize="small" />
@@ -445,33 +458,6 @@ export function HomePage() {
           })}
         </Box>
 
-        <Box
-          sx={{
-            px: { xs: 2, sm: 3 },
-            py: 1,
-            borderTop: 1,
-            borderColor: 'divider',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            flexShrink: 0,
-            bgcolor: '#ffffff',
-          }}
-        >
-          <Button
-            size="small"
-            variant="outlined"
-            color="inherit"
-            startIcon={
-              limpando ? <CircularProgress size={16} /> : <DeleteSweepIcon />
-            }
-            disabled={carregando || enviando || limpando || mensagens.length === 0}
-            onClick={handleLimparConversa}
-            sx={{ textTransform: 'none' }}
-          >
-            Limpar conversa
-          </Button>
-        </Box>
-
         {erroChat && (
           <Alert severity="error" sx={{ mx: 2, mb: 1, flexShrink: 0 }}>
             {erroChat}
@@ -486,54 +472,55 @@ export function HomePage() {
             py: 2,
             borderTop: 1,
             borderColor: 'divider',
-            display: 'flex',
-            gap: 1.5,
-            alignItems: 'flex-end',
             flexShrink: 0,
             bgcolor: '#ffffff',
           }}
         >
-          <TextField
-            fullWidth
-            placeholder="Digite sua mensagem..."
-            value={texto}
-            disabled={!usuario || enviando || limpando}
-            onChange={(e) => setTexto(e.target.value)}
-            multiline
-            maxRows={4}
-            helperText={
-              usuario
-                ? `Cada mensagem custa ${CUSTO_MENSAGEM_CHAT} moedas.`
-                : undefined
-            }
-            sx={{
-              '& .MuiOutlinedInput-root': {
-                bgcolor: '#f8fafc',
-                borderRadius: 2,
-              },
-            }}
-          />
-          <IconButton
-            type="submit"
-            color="primary"
-            disabled={
-              !usuario ||
-              enviando ||
-              limpando ||
-              !texto.trim() ||
-              (usuario.moedas ?? 0) < CUSTO_MENSAGEM_CHAT
-            }
-            sx={{
-              width: 48,
-              height: 48,
-              bgcolor: 'primary.main',
-              color: 'primary.contrastText',
-              '&:hover': { bgcolor: 'primary.dark' },
-              '&.Mui-disabled': { bgcolor: 'action.disabledBackground' },
-            }}
-          >
-            {enviando ? <CircularProgress size={22} color="inherit" /> : <SendIcon />}
-          </IconButton>
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              placeholder="Digite sua mensagem..."
+              value={texto}
+              disabled={!usuario || enviando || limpando}
+              onChange={(e) => setTexto(e.target.value)}
+              multiline
+              maxRows={4}
+              sx={{
+                '& .MuiOutlinedInput-root': {
+                  bgcolor: '#f8fafc',
+                  borderRadius: 2,
+                  alignItems: 'center',
+                },
+              }}
+            />
+            <IconButton
+              type="submit"
+              color="primary"
+              disabled={
+                !usuario ||
+                enviando ||
+                limpando ||
+                !texto.trim() ||
+                (usuario.moedas ?? 0) < CUSTO_MENSAGEM_CHAT
+              }
+              sx={{
+                flexShrink: 0,
+                width: 48,
+                height: 48,
+                bgcolor: 'primary.main',
+                color: 'primary.contrastText',
+                '&:hover': { bgcolor: 'primary.dark' },
+                '&.Mui-disabled': { bgcolor: 'action.disabledBackground' },
+              }}
+            >
+              {enviando ? <CircularProgress size={22} color="inherit" /> : <SendIcon />}
+            </IconButton>
+          </Box>
+          {usuario && (
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+              Cada mensagem custa {CUSTO_MENSAGEM_CHAT} moedas.
+            </Typography>
+          )}
         </Box>
       </Paper>
     </Box>

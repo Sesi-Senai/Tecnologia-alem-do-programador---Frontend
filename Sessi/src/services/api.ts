@@ -103,21 +103,27 @@ export function adicionarMoedasUsuario(id: string, quantidade = 100) {
 export type MensagemChat = {
   id: string
   usuarioId: string
+  conversaUsuarioId?: string
   nome: string
   texto: string
   criadoEm: string
 }
 
-export function listarMensagensChat() {
-  return requisicao<{ mensagens: MensagemChat[] }>('/chat', {
+export function listarMensagensChat(usuarioId: string) {
+  const params = new URLSearchParams({ usuarioId })
+  return requisicao<{ mensagens: MensagemChat[] }>(`/chat?${params}`, {
     method: 'GET',
   })
 }
 
-export function limparMensagensChat() {
-  return requisicao<{ mensagem: string; mensagens: MensagemChat[] }>('/chat', {
-    method: 'DELETE',
-  })
+export function limparMensagensChat(usuarioId: string) {
+  const params = new URLSearchParams({ usuarioId })
+  return requisicao<{ mensagem: string; mensagens: MensagemChat[] }>(
+    `/chat?${params}`,
+    {
+      method: 'DELETE',
+    },
+  )
 }
 
 export const CUSTO_MENSAGEM_CHAT = 15
