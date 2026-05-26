@@ -4,6 +4,7 @@ import { Alert, Button, CircularProgress, TextField } from '@mui/material'
 import { AuthLayout } from '../components/AuthLayout'
 import { CampoSenha } from '../components/CampoSenha'
 import { ApiError, loginUsuario } from '../services/api'
+import { salvarSessao } from '../services/auth'
 
 type ErrosLogin = {
   email?: string
@@ -32,8 +33,9 @@ export function LoginPage() {
     setCarregando(true)
     try {
       const resposta = await loginUsuario({ email, senha })
-      if (resposta.usuario?.id) {
-        navigate(`/home?id=${resposta.usuario.id}`)
+      if (resposta.usuario?.id && resposta.token) {
+        salvarSessao(resposta.token, resposta.usuario.id)
+        navigate('/home', { replace: true })
       }
     } catch (erro) {
       const mensagem =

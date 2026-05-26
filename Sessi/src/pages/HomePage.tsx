@@ -36,6 +36,11 @@ import {
   type MensagemChat,
   type UsuarioResposta,
 } from '../services/api'
+import {
+  estaAutenticado,
+  limparSessao,
+  obterUsuarioIdSessao,
+} from '../services/auth'
 
 function formatarHora(iso: string) {
   return new Date(iso).toLocaleTimeString('pt-BR', {
@@ -47,7 +52,8 @@ function formatarHora(iso: string) {
 export function HomePage() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const id = params.get('id')
+  const idUrl = params.get('id')
+  const idSessao = obterUsuarioIdSessao()
   const areaChatRef = useRef<HTMLDivElement>(null)
 
   const [usuario, setUsuario] = useState<UsuarioResposta | null>(null)
@@ -62,22 +68,27 @@ export function HomePage() {
   const [avisoMoedas, setAvisoMoedas] = useState('')
   const [menuAvatar, setMenuAvatar] = useState<null | HTMLElement>(null)
 
-  const carregarMensagens = useCallback(async () => {
-    if (!id) return
-    const resposta = await listarMensagensChat(id)
+  const carregarMensagens = useCallback(async (usuarioId: string) => {
+    const resposta = await listarMensagensChat(usuarioId)
     setMensagens(resposta.mensagens)
-  }, [id])
+  }, [])
 
   useEffect(() => {
-    if (!id) {
+    if (!estaAutenticado() || !idSessao) {
       navigate('/login', { replace: true })
+      return
+    }
+
+    if (idUrl && idUrl !== idSessao) {
+      setErro('Erro no id do usuario')
+      setCarregando(false)
       return
     }
 
     setCarregando(true)
     setErro('')
 
-    Promise.all([buscarUsuarioPorId(id), listarMensagensChat(id)])
+    Promise.all([buscarUsuarioPorId(idSessao), listarMensagensChat(idSessao)])
       .then(([usuarioRes, chatRes]) => {
         setUsuario(usuarioRes.usuario ?? null)
         setMensagens(chatRes.mensagens)
@@ -88,9 +99,12 @@ export function HomePage() {
             ? erro.message
             : 'Não foi possível carregar os dados.'
         setErro(mensagem)
+        if (erro instanceof ApiError && (erro.status === 401 || erro.status === 403)) {
+          limparSessao()
+        }
       })
       .finally(() => setCarregando(false))
-  }, [id, navigate])
+  }, [idSessao, idUrl, navigate])
 
   useEffect(() => {
     const area = areaChatRef.current
@@ -115,22 +129,14 @@ export function HomePage() {
     setEnviando(true)
 
     try {
-      const resposta = await enviarMensagemChat({
-        usuarioId: usuario.id,
-        usuarioCobrancaId: usuario.id,
-        nome: usuario.nome,
-        texto: texto.trim(),
-        moedasDescontar: CUSTO_MENSAGEM_CHAT,
-      })
+      const resposta = await enviarMensagemChat({ texto: texto.trim() })
       setTexto('')
-      if (resposta.usuarioCobranca.id === usuario.id) {
-        setUsuario((atual) =>
-          atual
-            ? { ...atual, moedas: resposta.usuarioCobranca.moedas }
-            : atual,
-        )
-      }
-      await carregarMensagens()
+      setUsuario((atual) =>
+        atual
+          ? { ...atual, moedas: resposta.usuarioCobranca.moedas }
+          : atual,
+      )
+      await carregarMensagens(usuario.id)
     } catch (erro) {
       const mensagem =
         erro instanceof ApiError
@@ -147,13 +153,13 @@ export function HomePage() {
   }
 
   async function handleLimparConversa() {
-    if (mensagens.length === 0 || !id) return
+    if (mensagens.length === 0 || !usuario) return
 
     setErroChat('')
     setLimpando(true)
 
     try {
-      await limparMensagensChat(id)
+      await limparMensagensChat(usuario.id)
       setMensagens([])
     } catch (erro) {
       const mensagem =
@@ -176,7 +182,8 @@ export function HomePage() {
 
   function handleSair() {
     handleFecharMenuAvatar()
-    navigate('/login')
+    limparSessao()
+    navigate('/login', { replace: true })
   }
 
   const iniciais = usuario?.nome
@@ -417,7 +424,7 @@ export function HomePage() {
           )}
 
           {mensagens.map((msg) => {
-            const propria = msg.usuarioId === id
+            const propria = msg.usuarioId === idSessao
             const corTexto = propria ? 'primary.contrastText' : 'text.primary'
             return (
               <Box

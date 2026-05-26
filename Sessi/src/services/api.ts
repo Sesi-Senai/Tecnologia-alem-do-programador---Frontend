@@ -1,8 +1,11 @@
+import { obterToken } from './auth'
+
 const API_BASE = import.meta.env.VITE_API_URL ?? '/api'
 
 type RespostaApi<T> = {
   mensagem: string
   usuario?: T
+  token?: string
 }
 
 export type UsuarioResposta = {
@@ -25,13 +28,26 @@ export class ApiError extends Error {
 async function requisicao<T>(
   caminho: string,
   opcoes: RequestInit,
+  exigeAuth = true,
 ): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json; charset=utf-8',
+    Accept: 'application/json; charset=utf-8',
+  }
+
+  if (exigeAuth) {
+    const token = obterToken()
+    if (token) {
+      headers.Authorization = `Bearer ${token}`
+    }
+  }
+
   const resposta = await fetch(`${API_BASE}${caminho}`, {
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      Accept: 'application/json; charset=utf-8',
-    },
     ...opcoes,
+    headers: {
+      ...headers,
+      ...(opcoes.headers as Record<string, string>),
+    },
   })
 
   const dados = await resposta.json().catch(() => ({}))
@@ -60,26 +76,29 @@ export type LoginPayload = {
 }
 
 export function cadastrarUsuario(dados: CadastroPayload) {
-  return requisicao<RespostaApi<UsuarioResposta>>('/cadastro', {
-    method: 'POST',
-    body: JSON.stringify(dados),
-  })
+  return requisicao<RespostaApi<UsuarioResposta>>(
+    '/cadastro',
+    {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    },
+    false,
+  )
 }
 
 export function loginUsuario(dados: LoginPayload) {
-  return requisicao<RespostaApi<UsuarioResposta>>('/login', {
-    method: 'POST',
-    body: JSON.stringify(dados),
-  })
+  return requisicao<RespostaApi<UsuarioResposta> & { token: string }>(
+    '/login',
+    {
+      method: 'POST',
+      body: JSON.stringify(dados),
+    },
+    false,
+  )
 }
 
-export type UsuarioCompleto = UsuarioResposta & {
-  senha?: string
-  criadoEm?: string
-}
-
-export function listarUsuarios() {
-  return requisicao<{ usuarios: UsuarioCompleto[] }>('/usuarios', {
+export function buscarUsuarioAtual() {
+  return requisicao<{ usuario: UsuarioResposta }>('/usuarios/me', {
     method: 'GET',
   })
 }
@@ -88,16 +107,6 @@ export function buscarUsuarioPorId(id: string) {
   return requisicao<{ usuario: UsuarioResposta }>(`/usuarios/${id}`, {
     method: 'GET',
   })
-}
-
-export function adicionarMoedasUsuario(id: string, quantidade = 100) {
-  return requisicao<{ mensagem: string; usuario: UsuarioResposta }>(
-    `/usuarios/${id}/moedas`,
-    {
-      method: 'POST',
-      body: JSON.stringify({ quantidade }),
-    },
-  )
 }
 
 export type MensagemChat = {
@@ -128,24 +137,7 @@ export function limparMensagensChat(usuarioId: string) {
 
 export const CUSTO_MENSAGEM_CHAT = 15
 
-export type EnviarMensagemChatPayload = {
-  usuarioId: string
-  usuarioCobrancaId: string
-  nome: string
-  texto: string
-  /** Enviado pelo cliente — vulnerabilidade intencional para demo (Caido/Postman). */
-  moedasDescontar?: number | string
-}
-
-export function enviarMensagemChat(dados: EnviarMensagemChatPayload) {
-  const corpo: EnviarMensagemChatPayload = {
-    usuarioId: dados.usuarioId,
-    usuarioCobrancaId: dados.usuarioCobrancaId,
-    nome: dados.nome,
-    texto: dados.texto,
-    moedasDescontar: dados.moedasDescontar ?? CUSTO_MENSAGEM_CHAT,
-  }
-
+export function enviarMensagemChat(dados: { texto: string }) {
   return requisicao<{
     mensagem: string
     chat: MensagemChat
@@ -153,6 +145,6 @@ export function enviarMensagemChat(dados: EnviarMensagemChatPayload) {
     usuarioCobranca: UsuarioResposta
   }>('/chat', {
     method: 'POST',
-    body: JSON.stringify(corpo),
+    body: JSON.stringify({ texto: dados.texto }),
   })
 }
